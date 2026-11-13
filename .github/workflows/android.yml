@@ -30,10 +30,16 @@ jobs:
       - name: 시험 설치용 파일 빌드 (APK)
         run: gradle -p android assembleDebug --no-daemon --stacktrace
 
-      - name: 시험용 서명 지문 출력
+      - name: 만들어진 앱 파일 내용 확인
         run: |
-          echo "아래 SHA256 값은 시험 설치용 파일의 서명 지문입니다."
-          keytool -list -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | grep -E "SHA256|SHA-256" || true
+          APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -1)
+          AAPT=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
+          echo "== 앱 기본 정보"
+          "$AAPT" dump badging "$APK" | grep -E "^package|^sdkVersion|^targetSdkVersion|^application-label:|launchable-activity" || true
+          echo "== 앱 설정 가운데 주소와 연결 관련 값"
+          "$AAPT" dump xmltree --file AndroidManifest.xml "$APK" | grep -E "DEFAULT_URL|android:host|android:pathPrefix|autoVerify|asset_statements|Raw: \"https" || true
+          echo "== 파일 크기"
+          ls -l "$APK"
 
       - name: 서명 열쇠 준비
         if: env.HAS_KEYSTORE == 'true'
