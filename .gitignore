@@ -1,0 +1,15 @@
+node_modules
+.next
+.data
+.env
+.env.local
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+.static-build
+out
+android/.gradle
+android/build
+android/app/build
+*.keystore
+*.jks

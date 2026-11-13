@@ -1,0 +1,70 @@
+plugins {
+    id 'com.android.application'
+}
+
+// 앱이 감싸는 웹 주소. 주소를 옮길 때는 이 두 값만 바꾸면 된다.
+def webHost = 'jhpar7607-web.github.io'
+def webPath = '/saju-hanjang'
+
+android {
+    namespace 'io.github.jhpar7607web.sajuhanjang'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'io.github.jhpar7607web.sajuhanjang'
+        minSdk 23
+        targetSdk 36
+        // 스토어에 새 버전을 올릴 때마다 versionCode 를 1씩 올린다.
+        versionCode 1
+        versionName '1.0.0'
+
+        manifestPlaceholders = [
+            webHost   : webHost,
+            webPath   : webPath,
+            // 주소 끝의 app=1 표시가 있으면 웹이 구매 안내를 숨긴다.
+            defaultUrl: "https://${webHost}${webPath}/?app=1",
+        ]
+        // 앱과 웹 주소가 한 주인의 것임을 알리는 값
+        resValue 'string', 'assetStatements',
+            '[{ \\"relation\\": [\\"delegate_permission/common.handle_all_urls\\"], ' +
+            '\\"target\\": { \\"namespace\\": \\"web\\", \\"site\\": \\"https://' + webHost + '\\" } }]'
+    }
+
+    signingConfigs {
+        // 서명 열쇠 정보는 환경 변수로만 받는다. 저장소에는 열쇠를 넣지 않는다.
+        release {
+            def ksFile = System.getenv('KEYSTORE_FILE')
+            if (ksFile) {
+                storeFile file(ksFile)
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias System.getenv('KEY_ALIAS')
+                keyPassword System.getenv('KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            if (System.getenv('KEYSTORE_FILE')) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    // 크롬의 '신뢰할 수 있는 웹 활동(TWA)'을 쉽게 쓰게 해 주는 구글 라이브러리
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.3'
+}

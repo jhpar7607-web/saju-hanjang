@@ -1,0 +1,76 @@
+# 안드로이드: 시험 설치용 파일(APK)을 만들고, 서명 열쇠가 등록돼 있으면 스토어 제출용 파일(AAB)도 만든다.
+name: 안드로이드 앱 빌드
+
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: 앱 빌드
+    runs-on: ubuntu-latest
+    env:
+      # 서명 열쇠가 등록돼 있는지 여부
+      HAS_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.14.3
+
+      - name: 시험 설치용 파일 빌드 (APK)
+        run: gradle -p android assembleDebug --no-daemon --stacktrace
+
+      - name: 시험용 서명 지문 출력
+        run: |
+          echo "아래 SHA256 값은 시험 설치용 파일의 서명 지문입니다."
+          keytool -list -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | grep -E "SHA256|SHA-256" || true
+
+      - name: 서명 열쇠 준비
+        if: env.HAS_KEYSTORE == 'true'
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/upload.jks"
+
+      - name: 스토어 제출용 파일 빌드 (AAB)
+        if: env.HAS_KEYSTORE == 'true'
+        run: gradle -p android bundleRelease assembleRelease --no-daemon --stacktrace
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/upload.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: 제출용 서명 지문 출력
+        if: env.HAS_KEYSTORE == 'true'
+        run: |
+          echo "아래 SHA256 값을 assetlinks.json 에 넣습니다."
+          keytool -list -v -keystore "$RUNNER_TEMP/upload.jks" -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -alias "${{ secrets.KEY_ALIAS }}" | grep -E "SHA256|SHA-256" || true
+
+      - name: 서명 열쇠 지우기
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
+
+      - name: 시험 설치용 파일 보관
+        uses: actions/upload-artifact@v4
+        with:
+          name: saju-hanjang-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: 스토어 제출용 파일 보관
+        if: env.HAS_KEYSTORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: saju-hanjang-release
+          path: |
+            android/app/build/outputs/bundle/release/*.aab
+            android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

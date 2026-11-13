@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 웹 화면과 같은 색 -->
+    <color name="status_bar">#1B1F3B</color>
+    <color name="navigation_bar">#FAF7F2</color>
+    <color name="splash_background">#FAF7F2</color>
+</resources>

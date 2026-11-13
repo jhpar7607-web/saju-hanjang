@@ -1,0 +1,17 @@
+// 사주한장 안드로이드 앱 (웹을 감싸는 TWA 방식)
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = 'saju-hanjang-android'
+include ':app'
