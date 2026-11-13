@@ -22,6 +22,8 @@ npm run dev        # http://localhost:3000
 | npm test | 자동 시험 53건 |
 | npm run typecheck | 형식 검사 |
 | python3 scripts/e2e.py http://localhost:3000 | 브라우저 사용 흐름 점검 52건 (개발 서버, 크롬과 playwright 필요) |
+| node scripts/build-static.mjs | 정적 웹 빌드 (out 폴더) |
+| python3 scripts/e2e-static.py | 정적 웹 브라우저 점검 13건 |
 | node scripts/load.mjs | 접속 증가 시험 (운영 서버를 3100번으로 띄운 뒤) |
 
 ## 환경 변수
@@ -80,12 +82,57 @@ scripts/                  브라우저 점검, 접속 증가 시험
 
 운영 환경에서는 반드시 Supabase 를 연결해야 합니다. Vercel 같은 서버리스 환경은 파일을 저장할 수 없어 주문이 남지 않습니다.
 
+## 두 가지 배포 방식
+
+| 방식 | 명령 | 되는 기능 | 올리는 곳 |
+| --- | --- | --- | --- |
+| 서버 방식 | npm run build | 전부 (AI, 결제, 유료 리포트, 이용 기록) | Vercel 같은 서버 |
+| 정적 방식 (무료판) | node scripts/build-static.mjs | 입력, 사주 표, 규칙 기반 풀이, 공유 카드, 안내 | 깃허브 무료 주소 |
+
+정적 방식은 계산과 풀이를 휴대폰 안에서 합니다. 입력한 생년월일은 서버로 나가지 않습니다.
+
+## 깃허브 자동 빌드
+
+main 가지에 올리면 두 작업이 자동으로 돕니다.
+
+| 작업 | 파일 | 하는 일 |
+| --- | --- | --- |
+| 웹 시험과 배포 | .github/workflows/web.yml | 자동 시험, 형식 검사, 정적 웹 빌드, 깃허브 무료 주소 배포 |
+| 안드로이드 앱 빌드 | .github/workflows/android.yml | 시험 설치용 APK, 서명 열쇠가 있으면 제출용 AAB |
+
+결과 파일은 깃허브 저장소의 Actions → 해당 실행 → Artifacts 에서 내려받습니다.
+
 ## 안드로이드 앱 (TWA)
 
-1. `npm i -g @bubblewrap/cli` 후 `bubblewrap init --manifest https://도메인/manifest.webmanifest`
-2. 시작 주소를 `/?app=1` 로 지정합니다. 이 표시가 있으면 결제 버튼이 숨겨집니다 (앱 1.0 은 무료 기능만).
-3. `bubblewrap build` 로 만든 서명 지문을 `public/.well-known/assetlinks.json` 에 넣고 패키지 이름을 채운 뒤 다시 배포합니다.
-4. 플레이 콘솔의 비공개 테스트 트랙에 올립니다.
+- 프로젝트 위치: android 폴더
+- 패키지 이름: io.github.jhpar7607web.sajuhanjang
+- 감싸는 주소: https://jhpar7607-web.github.io/saju-hanjang/?app=1 (android/app/build.gradle 의 webHost, webPath)
+- 대상 API 36, 최소 API 23, 버전 1.0.0
+
+### 서명 열쇠 만들기 (한 번만)
+
+```bash
+keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+base64 -w 0 upload.jks > upload.jks.base64     # 맥에서는: base64 -i upload.jks -o upload.jks.base64
+```
+
+저장소 Settings → Secrets and variables → Actions 에 아래 4개를 등록합니다.
+
+| 이름 | 값 |
+| --- | --- |
+| KEYSTORE_BASE64 | upload.jks.base64 파일의 내용 |
+| KEYSTORE_PASSWORD | 열쇠 파일 비밀번호 |
+| KEY_ALIAS | upload |
+| KEY_PASSWORD | 열쇠 비밀번호 |
+
+upload.jks 파일과 비밀번호는 저장소에 올리지 말고 따로 보관합니다. 잃어버리면 앱을 업데이트할 수 없습니다.
+
+### 주소창 없애기 (확인 파일)
+
+확인 파일은 주소의 맨 위에 있어야 합니다: https://jhpar7607-web.github.io/.well-known/assetlinks.json
+이 위치는 jhpar7607-web.github.io 라는 이름의 저장소만 올릴 수 있습니다. 그 저장소에 public/.well-known/assetlinks.json 을 올리고,
+파일 안의 지문 자리에 빌드 기록에 출력된 SHA256 값을 넣습니다. 플레이 스토어에 올린 뒤에는 플레이 콘솔의 '앱 서명' 화면에 나오는 지문도 함께 넣어야 합니다.
+그 저장소에는 빈 .nojekyll 파일도 함께 올려야 점으로 시작하는 폴더가 배포됩니다.
 
 ## 확인된 것과 확인되지 않은 것
 
