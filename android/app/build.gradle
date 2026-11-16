@@ -31,6 +31,15 @@ android {
     }
 
     signingConfigs {
+        // 시험 설치용 서명 열쇠. 저장소에 공개된 시험 전용 열쇠이며 스토어 제출에는 쓰지 않는다.
+        // 빌드할 때마다 서명이 바뀌면 이미 설치한 앱 위에 새 파일을 설치할 수 없어서 고정해 둔다.
+        debug {
+            storeFile rootProject.file('test-signing.p12')
+            storeType 'PKCS12'
+            storePassword 'android'
+            keyAlias 'saju-test'
+            keyPassword 'android'
+        }
         // 서명 열쇠 정보는 환경 변수로만 받는다. 저장소에는 열쇠를 넣지 않는다.
         release {
             def ksFile = System.getenv('KEYSTORE_FILE')

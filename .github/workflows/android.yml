@@ -1,10 +1,11 @@
-# 안드로이드: 시험 설치용 파일(APK)을 만들고, 서명 열쇠가 등록돼 있으면 스토어 제출용 파일(AAB)도 만든다.
+# 안드로이드: 시험 설치용 파일(APK)을 만들고, 가상 기기에 실제로 설치해 본 뒤, 받기 쉬운 주소에 올린다.
+# 서명 열쇠가 등록돼 있으면 스토어 제출용 파일(AAB)도 만든다.
 name: 안드로이드 앱 빌드
 
 on:
   push:
     branches: [main]
-    paths: ['android/**', '.github/workflows/android.yml']
+    paths: ['android/**', 'scripts/android-install-test.sh', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:
@@ -30,15 +31,18 @@ jobs:
       - name: 시험 설치용 파일 빌드 (APK)
         run: gradle -p android assembleDebug --no-daemon --stacktrace
 
-      - name: 만들어진 앱 파일 내용 확인
+      - name: 만들어진 앱 파일 내용과 서명 확인
         run: |
           APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -1)
-          AAPT=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
+          TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)
           echo "== 앱 기본 정보"
-          "$AAPT" dump badging "$APK" | grep -E "^package|^sdkVersion|^targetSdkVersion|^application-label:|launchable-activity" || true
+          "${TOOLS}aapt2" dump badging "$APK" | grep -E "^package|^sdkVersion|^targetSdkVersion|^application-label:|^application-icon|launchable-activity|testOnly|native-code" || true
           echo "== 앱 설정 가운데 주소와 연결 관련 값"
-          "$AAPT" dump xmltree --file AndroidManifest.xml "$APK" | grep -E "DEFAULT_URL|android:host|android:pathPrefix|autoVerify|asset_statements|Raw: \"https" || true
-          echo "== 파일 크기"
+          "${TOOLS}aapt2" dump xmltree --file AndroidManifest.xml "$APK" | grep -E "DEFAULT_URL|android:host|android:pathPrefix|autoVerify|testOnly|Raw: \"https" || true
+          echo "== 서명 확인 (오류가 있으면 여기서 멈춤)"
+          "${TOOLS}apksigner" verify --verbose --print-certs --min-sdk-version 23 "$APK" | grep -E "Verified|Verifies|SHA-256 digest|WARNING|ERROR"
+          echo "== 파일이 온전한지 확인"
+          unzip -tq "$APK"
           ls -l "$APK"
 
       - name: 서명 열쇠 준비
@@ -80,3 +84,56 @@ jobs:
             android/app/build/outputs/bundle/release/*.aab
             android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+  install-test:
+    name: 가상 기기 설치 시험 (API ${{ matrix.api }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 안드로이드 7, 14, 16
+        api: [24, 34, 36]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: saju-hanjang-debug-apk
+          path: apk
+      - name: 가상 기기 가속 켜기
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: 가상 기기에 설치
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: sh scripts/android-install-test.sh
+
+  publish:
+    name: 받기 쉬운 주소에 올리기
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: saju-hanjang-debug-apk
+          path: apk
+      - name: 시험 설치용 파일을 릴리스에 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cp "$(ls apk/*.apk | head -1)" saju-hanjang-test.apk
+          gh release delete test-latest --yes --cleanup-tag || true
+          gh release create test-latest saju-hanjang-test.apk \
+            --prerelease --target "$GITHUB_SHA" \
+            --title "사주한장 시험 설치용 (최신)" \
+            --notes "시험 설치용 파일입니다. 휴대폰에서 saju-hanjang-test.apk 를 눌러 바로 내려받아 설치할 수 있습니다. 스토어 제출용이 아닙니다."
