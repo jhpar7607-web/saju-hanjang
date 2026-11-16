@@ -19,13 +19,19 @@ adb shell dumpsys package "$PKG" | grep -E "versionName|versionCode|targetSdk" |
 echo "== 같은 파일을 한 번 더 설치 (덮어 설치 확인)"
 adb install -r "$APK"
 
-echo "== 앱 열기 (참고용: 가상 기기에는 크롬이 없을 수 있어 실패해도 빌드는 통과)"
+echo "== 앱 열기 (켜지자마자 꺼지면 여기서 멈춘다)"
 adb logcat -c || true
-adb shell am start -W -n "$PKG/com.google.androidbrowserhelper.trusted.LauncherActivity" || true
-sleep 10
-adb shell dumpsys activity activities | grep -E "topResumedActivity|mResumedActivity|ResumedActivity" | head -3 || true
-echo "== 앱 오류 기록 (없으면 아무것도 나오지 않음)"
-adb logcat -d -b crash | head -60 || true
+adb logcat -b crash -c || true
+adb shell am start -W -n "$PKG/com.google.androidbrowserhelper.trusted.LauncherActivity"
+sleep 12
+adb shell dumpsys activity activities | grep -E "topResumedActivity|mResumedActivity" | head -2 || true
 echo "== 기기에 있는 브라우저"
 adb shell pm list packages | grep -E "chrome|browser|webview" || true
-echo "== 설치 시험 통과"
+echo "== 앱 오류 기록 (없으면 아무것도 나오지 않음)"
+adb logcat -d -b crash > crash.txt || true
+head -40 crash.txt
+if grep -q "Process: $PKG" crash.txt; then
+  echo "앱이 실행 중에 꺼졌습니다. 시험 실패."
+  exit 1
+fi
+echo "== 설치와 실행 시험 통과"
