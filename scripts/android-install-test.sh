@@ -25,5 +25,7 @@ adb shell am start -W -n "$PKG/com.google.androidbrowserhelper.trusted.LauncherA
 sleep 10
 adb shell dumpsys activity activities | grep -E "topResumedActivity|mResumedActivity|ResumedActivity" | head -3 || true
 echo "== 앱 오류 기록 (없으면 아무것도 나오지 않음)"
-adb logcat -d | grep -E "FATAL EXCEPTION|Process: $PKG" | head -10 || true
+adb logcat -d -b crash | head -60 || true
+echo "== 기기에 있는 브라우저"
+adb shell pm list packages | grep -E "chrome|browser|webview" || true
 echo "== 설치 시험 통과"
