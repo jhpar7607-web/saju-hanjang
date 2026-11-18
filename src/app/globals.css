@@ -122,3 +122,20 @@ ol.actions { margin: 0; padding-left: 20px; }
 .doc h2 { margin-top: 26px; }
 .doc ul { padding-left: 20px; margin: 0 0 12px; }
 .preview { width: 100%; border-radius: 14px; border: 1px solid var(--line); display: block; }
+
+/* 1.1 자세한 풀이 */
+.menu-head { margin: 16px 0 8px; font-size: 15px; }
+.menu { display: grid; gap: 8px; }
+.menu-card { display: block; text-decoration: none; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--paper); }
+.menu-card:active { background: var(--accent-soft); }
+.menu-title { display: block; font-weight: 800; font-size: 16px; }
+.menu-sum { display: block; font-size: 14px; color: var(--soft); margin-top: 2px; }
+.tag.flow-strong { background: #e3f1e8; color: #1f6a3f; }
+.tag.flow-busy { background: #fbe9d7; color: #8a4b12; }
+.tag.flow-calm, .tag.plain { background: #ece9e2; color: #4a5066; }
+.pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.pick button { border: 1.5px solid var(--line); background: var(--card); border-radius: 999px; padding: 7px 13px; font-size: 14px; font-family: inherit; color: var(--ink); cursor: pointer; }
+.pick button[aria-pressed='true'] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }
+.month.hl { background: #f3f8f4; margin: 0 -18px; padding: 12px 18px; }
+.locked ul { padding-left: 20px; margin: 0 0 12px; }
+.btnrow > span { flex: 1; }

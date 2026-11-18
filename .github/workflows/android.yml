@@ -100,6 +100,11 @@ jobs:
         with:
           name: saju-hanjang-debug-apk
           path: apk
+      - name: 지난번 시험 설치용 파일 받기 (업데이트 설치 시험용)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release download test-latest -p saju-hanjang-test.apk -D old || echo "지난 파일 없음"
       - name: 가상 기기 가속 켜기
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -117,7 +122,8 @@ jobs:
 
   publish:
     name: 받기 쉬운 주소에 올리기
-    needs: build
+    # 가상 기기 설치 시험을 모두 통과한 파일만 올린다.
+    needs: [build, install-test]
     runs-on: ubuntu-latest
     permissions:
       contents: write

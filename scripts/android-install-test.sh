@@ -9,7 +9,13 @@ echo "== 기기 정보"
 adb shell getprop ro.build.version.release
 adb shell getprop ro.build.version.sdk
 
-echo "== 설치"
+if [ -f old/saju-hanjang-test.apk ]; then
+  echo "== 지난 버전 먼저 설치 (업데이트 설치 시험)"
+  adb install old/saju-hanjang-test.apk
+  adb shell dumpsys package "$PKG" | grep -E "versionName" | head -1
+fi
+
+echo "== 설치 (지난 버전이 있으면 그 위에 업데이트)"
 adb install -r "$APK"
 
 echo "== 설치된 앱 확인"

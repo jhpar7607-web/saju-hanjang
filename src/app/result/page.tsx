@@ -1,11 +1,13 @@
 'use client';
-// S3. 결과 화면: 사주 표, 무료 풀이, 2027 총운 요약, 공유 카드, 상세 리포트 안내
+// S3. 결과 화면: 사주 표, 무료 풀이, 2027 총운 요약, 공유 카드, 자세한 풀이 메뉴, 상세 리포트 안내
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Chart, FreeReading } from '@/lib/saju/types';
 import { isAppShell, loadInput, logEvent, won } from '@/lib/client';
-import { getReading, IS_STATIC } from '@/lib/api';
+import { getDetail, getReading, IS_STATIC } from '@/lib/api';
+import type { DetailReport } from '@/lib/saju/detail';
+import DetailMenu from '@/components/DetailMenu';
 import { ChartTable, ElementBars, GodGlossary, LuckRow, Standards } from '@/components/ChartView';
 import ShareCard from '@/components/ShareCard';
 import FlagButton from '@/components/FlagButton';
@@ -23,6 +25,7 @@ export default function ResultPage() {
   const [data, setData] = useState<Result | null>(null);
   const [error, setError] = useState('');
   const [app, setApp] = useState(false);
+  const [detail, setDetail] = useState<DetailReport | null>(null);
 
   useEffect(() => {
     const input = loadInput();
@@ -38,6 +41,8 @@ export default function ResultPage() {
         logEvent('result_view', { source: r.reading.source });
       })
       .catch((e) => setError(e instanceof Error ? e.message : '결과를 불러오지 못했습니다.'));
+    // 자세한 풀이 메뉴는 따로 만든다. 실패해도 무료 결과는 그대로 보인다.
+    getDetail(input).then((r) => setDetail(r.detail)).catch(() => setDetail(null));
   }, [router]);
 
   if (error) {
@@ -89,6 +94,8 @@ export default function ResultPage() {
           {reading.keywords.map((k) => <span className="chip" key={k}>{k}</span>)}
         </div>
       </section>
+
+      {detail && <DetailMenu detail={detail} />}
 
       <section className="card stack" aria-label="공유">
         <ShareCard chart={chart} title={reading.personalityTitle} line={reading.yearLine} keywords={reading.keywords} />

@@ -3,6 +3,7 @@
 // 같은 계산 프로그램을 휴대폰 안에서 직접 돌린다. 정적 배포에서는 생년월일이 휴대폰 밖으로 나가지 않는다.
 
 import type { BirthInput, Chart, FreeReading } from './saju/types';
+import type { DetailReport } from './saju/detail';
 import { deviceId, postJson } from './client';
 
 /** 정적 배포인지 여부 (빌드할 때 정해진다) */
@@ -41,4 +42,17 @@ export async function getReading(input: BirthInput): Promise<ReadingResult> {
     };
   }
   return postJson<ReadingResult>('/api/reading', { ...input, device: deviceId() });
+}
+
+/**
+ * 자세한 풀이(주제별 운, 시기별 운)를 만든다.
+ * 계산 규칙만 쓰므로 어느 배포에서든 휴대폰 안에서 만든다. 생년월일은 밖으로 나가지 않는다.
+ */
+export async function getDetail(input: BirthInput): Promise<{ chart: Chart; detail: DetailReport }> {
+  const [{ validateInput, computeChart }, { buildDetail }] = await Promise.all([
+    import('./saju/engine'),
+    import('./saju/detail'),
+  ]);
+  const chart = computeChart(validateInput(input));
+  return { chart, detail: buildDetail(chart) };
 }

@@ -50,6 +50,35 @@ with sync_playwright() as p:
     check('공유 카드 그려짐', page.evaluate('document.querySelector("canvas.preview").width') == 1080)
     check('신고 대신 문의처 안내', page.locator('text=안내 화면의 문의처').count() == 1)
 
+    # 1.1 자세한 풀이: 메뉴 11칸, 항목별 화면, 공개/잠금 설정
+    expect_open = os.environ.get('EXPECT_OPEN', '1') == '1'
+    check('자세한 풀이 메뉴 11칸', page.locator('.menu-card').count() == 11, str(page.locator('.menu-card').count()))
+    page.click('.menu-card >> nth=2'); page.wait_for_url('**/detail/**'); page.wait_for_selector('h1')
+    check('메뉴에서 연애·결혼운 열림', page.inner_text('h1') == '연애·결혼운', page.inner_text('h1'))
+    titles = {'money': '재물운', 'career': '성공·직업운', 'love': '연애·결혼운', 'health': '건강운',
+              'study': '학업·시험운', 'people': '대인관계운', 'family': '가족운', 'year1': '1년운 (2027년)',
+              'year5': '5년운 (2027~2031)', 'decade': '10년운 (대운)', 'life': '인생 시기별 운'}
+    rows_expected = {'year1': 12, 'year5': 5, 'life': 4}
+    for item, title in titles.items():
+        page.goto(BASE + f'/detail/?item={item}'); page.wait_for_selector('h1')
+        ok = page.inner_text('h1') == title
+        n_cards = page.locator('main .card').count()
+        if expect_open:
+            ok = ok and page.locator('.locked').count() == 0 and n_cards >= 2
+            if item in rows_expected:
+                ok = ok and page.locator('.month').count() == rows_expected[item]
+        else:
+            ok = ok and page.locator('.locked').count() == 1 and page.locator('.month').count() == 0
+        ok = ok and page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+        check(f'자세한 풀이 {title}', ok, f'카드 {n_cards}')
+    check('공개 설정 표시', ('체험 기간' in page.inner_text('main')) == expect_open)
+    page.click('button:has-text("이전:")'); page.wait_for_function('document.querySelector("h1").textContent === "10년운 (대운)"')
+    check('이전 항목으로 이동', True)
+    page.click('button:has-text("주제별 운")'); page.wait_for_function('document.querySelector("h1").textContent === "재물운"')
+    check('묶음 전환', True)
+    page.go_back(); page.wait_for_function('document.querySelector("h1").textContent === "10년운 (대운)"')
+    check('뒤로 가기', True)
+
     # 없는 날짜 안내
     page.goto(BASE + '/input/')
     page.wait_for_function('document.querySelector("#year").value === "1992"')

@@ -36,6 +36,9 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}
           SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          # 자세한 풀이 공개 설정. 저장소 Settings > Secrets and variables > Actions > Variables 에서
+          # PREMIUM_OPEN 을 0 으로 만들면 잠금, 값이 없거나 1 이면 체험 공개.
+          NEXT_PUBLIC_PREMIUM_OPEN: ${{ vars.PREMIUM_OPEN || '1' }}
       - name: 배포할 파일 올리기
         uses: actions/upload-pages-artifact@v3
         with:
